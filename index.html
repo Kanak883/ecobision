@@ -7,61 +7,91 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
     <style>
-        /* Previous CSS stays the same */
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f9eb;
+            color: #2c3e50;
+        }
         .camera-container {
             position: relative;
-            width: 640px;
-            height: 480px;
+            max-width: 640px;
             margin: 0 auto;
         }
         #webcam, #overlay {
-            position: absolute;
-            left: 0;
-            top: 0;
+            width: 100%;
             border-radius: 10px;
+        }
+        button {
+            background: #27ae60;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 25px;
+            margin: 15px auto;
         }
     </style>
 </head>
 <body>
-    <div id="container">
+    <div class="camera-container">
         <h1>🌱 EcoScan</h1>
-        <div class="camera-container">
-            <video id="webcam" autoplay muted playsinline></video>
-            <canvas id="overlay"></canvas>
-        </div>
+        <video id="webcam" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
         <button id="scanButton">Start Scanning</button>
-        <div id="results"></div>
     </div>
 
     <script>
         let net;
         let isScanning = false;
-        const materialMap = { /* keep previous mapping */ };
+        const MIN_CONFIDENCE = 0.7;
+        
+        // Enhanced class corrections
+        const classCorrections = {
+            'umbrella': 'paper',
+            'cell phone': 'e-waste',
+            'cup': obj => obj.score > 0.8 ? 'plastic cup' : 'paper cup',
+            'book': 'paper',
+            'handbag': 'textile',
+            'bottle': 'plastic bottle'
+        };
 
-        // Add canvas drawing functions
-        function drawDetection(ctx, obj, material) {
-            const colors = {
-                plastic: '#FF4757',
-                metal: '#3498db',
-                paper: '#2ed573',
-                unknown: '#95a5a6'
-            };
+        // Improved material mapping
+        const materialMap = {
+            'paper': {type: 'paper', color: '#2ed573'},
+            'plastic bottle': {type: 'plastic', color: '#ff4757'},
+            'can': {type: 'metal', color: '#3498db'},
+            'e-waste': {type: 'metal', color: '#3498db'},
+            'default': {type: 'unknown', color: '#95a5a6'}
+        };
+
+        async function setupWebcam() {
+            const video = document.getElementById('webcam');
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: {ideal: 640},
+                        height: {ideal: 480}
+                    }
+                });
+                video.srcObject = stream;
+                return new Promise(resolve => video.onloadedmetadata = resolve);
+            } catch (err) {
+                alert("Camera access required for waste scanning");
+                return null;
+            }
+        }
+
+        function getMaterial(className) {
+            // First check direct matches
+            if (materialMap[className]) return materialMap[className];
             
-            // Draw bounding box
-            ctx.strokeStyle = colors[material] || '#95a5a6';
-            ctx.lineWidth = 3;
-            ctx.strokeRect(...obj.bbox);
+            // Then check partial matches
+            const matches = Object.entries(materialMap).find(([key]) => 
+                className.toLowerCase().includes(key)
+            );
             
-            // Draw label background
-            ctx.fillStyle = colors[material] || '#95a5a6';
-            const text = `${obj.class} (${Math.round(obj.score * 100)}%) - ${material}`;
-            const textWidth = ctx.measureText(text).width;
-            ctx.fillRect(obj.bbox[0], obj.bbox[1] - 20, textWidth + 10, 20);
-            
-            // Draw text
-            ctx.fillStyle = 'white';
-            ctx.font = '14px Arial';
-            ctx.fillText(text, obj.bbox[0] + 5, obj.bbox[1] - 5);
+            return matches ? matches[1] : materialMap.default;
         }
 
         async function detectObjects() {
@@ -69,50 +99,53 @@
             const canvas = document.getElementById('overlay');
             const ctx = canvas.getContext('2d');
             
-            if (!video || !net) return;
-
-            // Set canvas size to match video
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-
+            
             const objects = await net.detect(video);
-            
-            // Clear previous frame
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw new detections
+
             objects.forEach(obj => {
-                const material = materialMap[obj.class] || 'unknown';
-                drawDetection(ctx, obj, material);
+                if (obj.score < MIN_CONFIDENCE) return;
+                
+                // Apply class corrections
+                let className = classCorrections[obj.class] || obj.class;
+                if (typeof className === 'function') className = className(obj);
+                
+                // Get material data
+                const material = getMaterial(className);
+                
+                // Draw detection
+                ctx.strokeStyle = material.color;
+                ctx.lineWidth = 3;
+                ctx.strokeRect(...obj.bbox);
+                
+                // Draw label
+                ctx.fillStyle = material.color;
+                const label = `${className} (${Math.round(obj.score * 100)}%)`;
+                ctx.fillRect(obj.bbox[0], obj.bbox[1] - 20, ctx.measureText(label).width + 10, 20);
+                ctx.fillStyle = 'white';
+                ctx.fillText(label, obj.bbox[0] + 5, obj.bbox[1] - 5);
             });
 
-            if (isScanning) {
-                requestAnimationFrame(detectObjects);
-            }
+            if (isScanning) requestAnimationFrame(detectObjects);
         }
 
-        // Previous setupWebcam and event listeners remain the same
-        // Add this to your existing setupWebcam function:
-        async function setupWebcam() {
-            const video = document.getElementById('webcam');
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                video.srcObject = stream;
-                return new Promise((resolve) => {
-                    video.onloadedmetadata = () => {
-                        video.width = video.videoWidth;
-                        video.height = video.videoHeight;
-                        resolve(video);
-                    };
-                });
-            } catch (err) {
-                console.error("Camera error:", err);
-                alert("Please enable camera access to use this feature");
-                return null;
+        document.getElementById('scanButton').addEventListener('click', async () => {
+            if (!isScanning) {
+                const video = await setupWebcam();
+                if (video) {
+                    net = net || await cocoSsd.load();
+                    isScanning = true;
+                    detectObjects();
+                    document.getElementById('scanButton').textContent = 'Stop Scanning';
+                }
+            } else {
+                isScanning = false;
+                video.srcObject.getTracks().forEach(track => track.stop());
+                document.getElementById('scanButton').textContent = 'Start Scanning';
             }
-        }
-
-        // Keep the rest of your existing code
+        });
     </script>
 </body>
 </html>
