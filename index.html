@@ -1,269 +1,206 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>EcoVision - Waste Analyzer</title>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.18.0/dist/tf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Keep previous head content -->
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-        }
-
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 1rem;
-        }
-
-        .camera-box {
-            position: relative;
+        /* Add these new styles */
+        .science-facts {
             background: #fff;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            overflow: hidden;
-            margin-bottom: 1rem;
-        }
-
-        #webcam {
-            width: 100%;
-            height: 60vh;
-            object-fit: cover;
-        }
-
-        #overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-        }
-
-        .controls {
-            position: absolute;
-            bottom: 1rem;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 1rem;
-        }
-
-        button {
-            background: #27ae60;
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            transition: 0.3s;
-        }
-
-        button:hover {
-            background: #219a52;
-        }
-
-        .impact-card {
-            background: white;
             border-radius: 12px;
-            padding: 1rem;
-            margin-bottom: 1rem;
+            padding: 1.5rem;
+            margin: 1rem 0;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
 
-        .impact-meter {
-            height: 8px;
-            background: #eee;
-            border-radius: 4px;
-            margin: 0.5rem 0;
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
         }
 
-        .meter-fill {
+        .data-card {
+            padding: 1rem;
+            border-left: 4px solid;
+            background: #f8f9fa;
+        }
+
+        .decomposition-timeline {
+            position: relative;
+            height: 40px;
+            background: #e9ecef;
+            border-radius: 20px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .timeline-bar {
             height: 100%;
-            border-radius: 4px;
             transition: width 0.5s ease;
         }
 
-        .eco-rating {
+        .impact-category {
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
+            gap: 0.8rem;
+            margin: 0.5rem 0;
         }
 
-        .eco-icon {
-            font-size: 1.2rem;
+        .impact-icon {
+            font-size: 1.5rem;
+            width: 30px;
         }
 
-        .material-icons {
-            vertical-align: middle;
+        .toxicity-meter {
+            width: 100%;
+            height: 8px;
+            background: #dee2e6;
+            border-radius: 4px;
         }
 
-        #cameraSwitch {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            background: rgba(0,0,0,0.7);
-            padding: 0.8rem;
-            border-radius: 50%;
-        }
-
-        @media (max-width: 600px) {
-            #webcam {
-                height: 50vh;
-            }
+        .source-link {
+            color: #27ae60;
+            text-decoration: none;
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 style="text-align: center; margin: 1rem 0; color: #27ae60;">
-            <i class="fas fa-leaf"></i> EcoVision
-        </h1>
-
-        <div class="camera-box">
-            <video id="webcam" autoplay muted playsinline></video>
-            <canvas id="overlay"></canvas>
-            <div class="controls">
-                <button id="scanButton">
-                    <i class="fas fa-search"></i> Start Scan
-                </button>
-            </div>
-            <button id="cameraSwitch">
-                <i class="fas fa-camera-retro"></i>
-            </button>
-        </div>
-
-        <div id="results"></div>
-    </div>
+    <!-- Keep previous body content -->
 
     <script>
-        let net;
-        let isScanning = false;
-        let currentStream = null;
-        const MIN_CONFIDENCE = 0.65;
-        
-        // Environmental Impact Database
-        const ecoData = {
+        // Enhanced Environmental Science Database
+        const ecoScienceData = {
             'plastic': {
-                decomposition: '450-1000 years',
-                co2: '6 kg CO2/kg',
-                recyclability: '20%',
-                ecoScore: 2,
-                tips: ['Avoid single-use plastics', 'Recycle properly']
+                decomposition: {
+                    timeline: '450-1000 years',
+                    stages: [
+                        {years: 0, event: 'Production - Petroleum extraction'},
+                        {years: 5, event: 'Photodegradation begins'},
+                        {years: 100, event: 'Microplastics formation'},
+                        {years: 450, event: 'Complete breakdown (estimate)'}
+                    ]
+                },
+                environmentalImpact: {
+                    marineLife: '1M+ marine animals killed/year',
+                    co2PerKg: '6 kg CO2 emissions',
+                    landfillSpace: 'Occupies 25% landfill space',
+                    toxicity: 8.5
+                },
+                alternatives: ['Bamboo', 'Glass', 'Biodegradable polymers'],
+                references: [
+                    {
+                        title: "UNEP Plastic Waste Management",
+                        url: "https://www.unep.org/plastic-waste"
+                    }
+                ]
             },
             'paper': {
-                decomposition: '2-6 weeks',
-                co2: '1 kg CO2/kg',
-                recyclability: '65%',
-                ecoScore: 8,
-                tips: ['Recycle dry paper', 'Compost when possible']
-            },
-            'metal': {
-                decomposition: '50-200 years',
-                co2: '2.5 kg CO2/kg',
-                recyclability: '90%',
-                ecoScore: 9,
-                tips: ['Recycle indefinitely', 'Avoid single-use cans']
-            },
-            'e-waste': {
-                decomposition: '1000+ years',
-                co2: '15 kg CO2/kg',
-                recyclability: '30%',
-                ecoScore: 3,
-                tips: ['Use e-waste recycling centers', 'Repair electronics']
+                decomposition: {
+                    timeline: '2-6 months',
+                    stages: [
+                        {years: 0.01, event: 'Landfill deposition'},
+                        {years: 0.1, event: 'Methane production peaks'},
+                        {years: 0.5, event: 'Complete decomposition'}
+                    ]
+                },
+                environmentalImpact: {
+                    marineLife: 'Low direct impact',
+                    co2PerKg: '1 kg CO2 emissions',
+                    landfillSpace: 'Decomposes to 40% original volume',
+                    toxicity: 2.3
+                },
+                alternatives: ['Digital documents', 'Stone paper', 'Recycled paper'],
+                references: [
+                    {
+                        title: "EPA Paper Recycling Guidelines",
+                        url: "https://www.epa.gov/recycle"
+                    }
+                ]
             }
         };
 
-        async function setupWebcam(facingMode = 'environment') {
-            if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
-            }
-
-            const constraints = {
-                video: {
-                    facingMode: facingMode,
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                }
-            };
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const video = document.getElementById('webcam');
-                video.srcObject = stream;
-                currentStream = stream;
-                
-                return new Promise(resolve => {
-                    video.onloadedmetadata = () => resolve(video);
-                });
-            } catch (err) {
-                alert('Camera access required for waste analysis');
-                return null;
-            }
-        }
-
-        function createImpactCard(material) {
-            const data = ecoData[material] || ecoData['plastic'];
+        function createScienceCard(material) {
+            const data = ecoScienceData[material] || ecoScienceData['plastic'];
             return `
-                <div class="impact-card">
-                    <h3><i class="fas fa-recycle"></i> ${material.toUpperCase()} ANALYSIS</h3>
-                    <div class="eco-rating">
-                        <span>Eco-Score:</span>
-                        <div style="color: ${getEcoColor(data.ecoScore)}">
-                            ${'★'.repeat(data.ecoScore)}${'☆'.repeat(10 - data.ecoScore)}
+                <div class="science-facts">
+                    <h2><i class="fas fa-microscope"></i> Scientific Analysis: ${material.toUpperCase()}</h2>
+                    
+                    <div class="decomposition-timeline">
+                        <div class="timeline-bar" style="width: ${
+                            Math.min(100, (getMaxDecompositionYears(material)/1000)*100)
+                        }%; background: ${getEcoColor(data.environmentalImpact.toxicity)}">
                         </div>
                     </div>
-                    
-                    <p><i class="fas fa-hourglass-half"></i> Decomposition: ${data.decomposition}</p>
-                    <p><i class="fas fa-smog"></i> CO2 Impact: ${data.co2}</p>
-                    
-                    <div class="impact-meter">
-                        <div class="meter-fill" style="width: ${data.recyclability}; 
-                             background: ${getEcoColor(data.ecoScore)}"></div>
+                    <div class="timeline-label">
+                        ${data.decomposition.timeline} Decomposition Period
                     </div>
-                    
-                    <div class="eco-tips">
-                        <h4><i class="fas fa-lightbulb"></i> Improvement Tips:</h4>
-                        <ul>
-                            ${data.tips.map(tip => `<li>${tip}</li>`).join('')}
-                        </ul>
+
+                    <div class="data-grid">
+                        <div class="data-card" style="border-color: #e74c3c">
+                            <h4><i class="fas fa-fish"></i> Marine Impact</h4>
+                            <p>${data.environmentalImpact.marineLife}</p>
+                        </div>
+
+                        <div class="data-card" style="border-color: #f1c40f">
+                            <h4><i class="fas fa-industry"></i> CO2 Emissions</h4>
+                            <p>${data.environmentalImpact.co2PerKg} per kg produced</p>
+                        </div>
+
+                        <div class="data-card" style="border-color: #2ecc71">
+                            <h4><i class="fas fa-recycle"></i> Recommended Alternatives</h4>
+                            <ul>
+                                ${data.alternatives.map(alt => `<li>${alt}</li>`).join('')}
+                            </ul>
+                        </div>
                     </div>
+
+                    <h3 style="margin-top: 1rem;"><i class="fas fa-chart-line"></i> Decomposition Stages</h3>
+                    <div class="timeline-steps">
+                        ${data.decomposition.stages.map(step => `
+                            <div class="impact-category">
+                                <i class="fas fa-hourglass-half impact-icon"></i>
+                                <div>
+                                    <strong>Year ${step.years}:</strong> 
+                                    ${step.event}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+
+                    <h3 style="margin-top: 1rem;"><i class="fas fa-skull-crossbones"></i> Toxicity Level</h3>
+                    <div class="toxicity-meter">
+                        <div class="meter-fill" style="width: ${data.environmentalImpact.toxicity * 10}%; 
+                             background: ${getEcoColor(data.environmentalImpact.toxicity)}"></div>
+                    </div>
+                    <small>Scale: 1 (Low) - 10 (High)</small>
+
+                    <h3 style="margin-top: 1rem;"><i class="fas fa-book-open"></i> References</h3>
+                    ${data.references.map(ref => `
+                        <p><a href="${ref.url}" target="_blank" class="source-link">
+                            <i class="fas fa-external-link-alt"></i> ${ref.title}
+                        </a></p>
+                    `).join('')}
                 </div>
             `;
         }
 
-        function getEcoColor(score) {
-            if (score >= 8) return '#2ecc71';
-            if (score >= 5) return '#f1c40f';
-            return '#e74c3c';
+        function getMaxDecompositionYears(material) {
+            const timeline = ecoScienceData[material].decomposition.timeline;
+            return parseInt(timeline.split('-').pop().replace(' years','').trim()) || 1000;
         }
 
-        // Rest of the detection code from previous version with improved classifications
-        // Add camera switching functionality
-        document.getElementById('cameraSwitch').addEventListener('click', async () => {
-            const currentFacingMode = currentStream?.getVideoTracks()[0]?.getSettings().facingMode;
-            const newMode = currentFacingMode === 'environment' ? 'user' : 'environment';
-            await setupWebcam(newMode);
-            if (isScanning) detectObjects();
-        });
+        // Update the detection callback to use new science card
+        function processDetection(obj, material) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = createScienceCard(material);
+        }
 
-        // Initialize models and camera
-        (async function init() {
-            net = await cocoSsd.load();
-            await setupWebcam();
-        })();
+        // Update the drawDetection function to call processDetection
+        function drawDetection(ctx, obj, material) {
+            // ... previous drawing code ...
+            processDetection(obj, material);
+        }
     </script>
 </body>
 </html>
